@@ -1,0 +1,61 @@
+<?php
+/*
+Plugin Name: Simple content generator
+Plugin URI: http://google.com
+Description: Generate posts randomly!
+Author: Omar Essam
+Author URI: http://google.com
+Version: 1.0
+
+*/
+
+class simple_content_generator {
+     
+     protected $posts;
+     public function __construct(){
+          $posts = array();
+          if ( ! wp_next_scheduled( 'simple_content_generator' ) ) {
+               wp_schedule_event( time(), 'hourly', 'simple_content_generator' );
+          }
+          add_action('simple_content_generator',array($this,"run"));
+     }
+     public function getPosts(){
+          $xml = @simplexml_load_file("http://www.gamespot.com/feeds/news/");
+          if($xml == FALSE)
+               return;
+          $items = $xml->xpath("/rss/channel/item");
+          $i = 0;
+          $myposts = array();
+          foreach($items as $item){
+               if(2 == $i)
+                    break;
+               $post['post_title'] = $item->title;
+               $post['post_link'] = $item->link;
+               $post['post_content'] = str_replace("iframe",'div style= "display:none;"',$item->description->__toString());
+               $myposts[$i] = $post;
+               $i++;
+          }
+          $this->posts = $myposts;
+          
+     }
+     public function run(){
+          global $wpdb;
+          global $user_ID;
+          $this->getPosts();
+          if($this->posts == null)
+               return;
+          foreach($this->posts as $post){
+               $dbPost = $wpdb->get_row("SELECT * FROM $wpdb->posts WHERE post_title = '{$post['post_title']}' AND post_status = 'publish'");
+               if($dbPost == null){
+                    $post['post_status'] = 'publish';
+                    $post['post_author'] = $user_ID;
+                    $post['post_excerpt'] = substr($post['content'],0,50);
+                    wp_insert_post($post);
+               }
+               else 
+                    continue;
+          }
+     }
+}
+
+$process = new simple_content_generator();
