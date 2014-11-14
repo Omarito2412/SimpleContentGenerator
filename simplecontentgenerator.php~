@@ -62,7 +62,7 @@ class simple_content_generator {
      }
      public function deactivate(){
           if ( wp_next_scheduled( 'simple_content_generator' ) ) {
-               wp_clear_scheduled_hook( 'simple_content_generator' );
+          
           }
      }
 }
